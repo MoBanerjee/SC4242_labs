@@ -135,9 +135,8 @@ public class ExprCodeGenerator extends Visitor<Value> {
 	@Override
 	public Value visitArrayIndex(ArrayIndex nd) {
 		/* TODO: generate code for array index */
-	    Value array = wrap(nd.getBase().accept(this));
-	    Value index = wrap(nd.getIndex().accept(this));
-	    return Jimple.v().newArrayRef(array, index);
+		return Jimple.v().newArrayRef(wrap(nd.getBase().accept(this)),
+				wrap(nd.getIndex().accept(this)));
 	}
 	
 	/** Generate code for a variable name. */
@@ -162,22 +161,36 @@ public class ExprCodeGenerator extends Visitor<Value> {
 		 *       generate code in the more specialised visitor methods visitAddExpr,
 		 *       visitSubExpr, etc., instead
 		 */
-	    Value left = wrap(nd.getLeft().accept(this));
-	    Value right = wrap(nd.getRight().accept(this));
-	    Local result = fcg.mkTemp(left.getType());
-	    
-	    if (nd instanceof AddExpr) {
-	        units.add(Jimple.v().newAssignStmt(result, Jimple.v().newAddExpr(left, right)));
-	    } else if (nd instanceof SubExpr) {
-	        units.add(Jimple.v().newAssignStmt(result, Jimple.v().newSubExpr(left, right)));
-	    } else if (nd instanceof MulExpr) {
-	        units.add(Jimple.v().newAssignStmt(result, Jimple.v().newMulExpr(left, right)));
-	    } else if (nd instanceof DivExpr) {
-	        units.add(Jimple.v().newAssignStmt(result, Jimple.v().newDivExpr(left, right)));
-	    } else if (nd instanceof ModExpr) {
-	        units.add(Jimple.v().newAssignStmt(result, Jimple.v().newRemExpr(left, right)));
-	    }
-	    return result;
+		final Value lhs = wrap(nd.getLeft().accept(this));
+		final Value rhs = wrap(nd.getRight().accept(this));
+		Value res = nd.accept(new Visitor<Value>() {
+			@Override
+			public Value visitAddExpr(AddExpr nd) {
+				return Jimple.v().newAddExpr(lhs, rhs);
+			}
+
+			@Override
+			public Value visitSubExpr(SubExpr nd) {
+				return Jimple.v().newSubExpr(lhs, rhs);
+			}
+
+			@Override
+			public Value visitMulExpr(MulExpr nd) {
+				return Jimple.v().newMulExpr(lhs, rhs);
+			}
+
+			@Override
+			public Value visitDivExpr(DivExpr nd) {
+				return Jimple.v().newDivExpr(lhs, rhs);
+			}
+
+			@Override
+			public Value visitModExpr(ModExpr nd) {
+				return Jimple.v().newRemExpr(lhs, rhs);
+			}
+		});
+
+		return res;
 	}
 	
 	/** Generate code for a comparison expression. */
@@ -225,10 +238,7 @@ public class ExprCodeGenerator extends Visitor<Value> {
 	@Override
 	public Value visitNegExpr(NegExpr nd) {
 		/* TODO: generate code for negation expression */
-	    Value operand = wrap(nd.getOperand().accept(this));
-	    Local result = fcg.mkTemp(operand.getType());
-	    units.add(Jimple.v().newAssignStmt(result, Jimple.v().newNegExpr(operand)));
-	    return result;
+		return Jimple.v().newNegExpr(wrap(nd.getOperand().accept(this)));
 	}
 	
 	/** Generate code for a function call. */
